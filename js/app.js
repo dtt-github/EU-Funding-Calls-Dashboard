@@ -258,13 +258,18 @@
     Auth._showToast = showToast;
 
     Auth._onAuthChange = async function (user) {
+      var local = [];
+      try { local = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
+
       if (user) {
-        var ids = await Auth.loadSelections(user.id);
-        selectedIds = new Set(ids);
+        var remote = await Auth.loadSelections(user.id);
+        var merged = new Set(local.concat(remote));
+        selectedIds = merged;
+        saveSelections();
+        var localOnly = local.filter(function (id) { return !new Set(remote).has(id); });
+        localOnly.forEach(function (id) { Auth.saveSelection(id); });
         updateSelectionSubtitle(true);
       } else {
-        var local = [];
-        try { local = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
         selectedIds = new Set(local);
         updateSelectionSubtitle(false);
       }
@@ -734,10 +739,7 @@
   }
 
   function saveSelections() {
-    var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
-    if (!user) {
-      localStorage.setItem('selectedCalls', JSON.stringify(Array.from(selectedIds)));
-    }
+    localStorage.setItem('selectedCalls', JSON.stringify(Array.from(selectedIds)));
   }
 
   function exportSelections() {
