@@ -132,6 +132,11 @@
     return params.get('shared') || null;
   }
 
+  function getSharedName() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('sharer') || null;
+  }
+
   async function loadSharedUserEmail(userId) {
     var client = getClient();
     if (!client) return null;
@@ -303,7 +308,11 @@
     if (shareBtn) {
       shareBtn.addEventListener('click', function () {
         if (!currentUser) return;
-        var url = window.location.origin + window.location.pathname + '?shared=' + currentUser.id;
+        var name = (currentUser.user_metadata && currentUser.user_metadata.full_name)
+          || currentUser.email.split('@')[0];
+        var url = window.location.origin + window.location.pathname
+          + '?shared=' + currentUser.id
+          + '&sharer=' + encodeURIComponent(name);
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url).then(function () {
             window.Auth._showToast('Share link copied to clipboard!');
@@ -318,7 +327,12 @@
     if (sharedUserId && sharedBanner) {
       sharedBanner.classList.add('visible');
       var sharedLabel = document.getElementById('shared-banner-label');
-      if (sharedLabel) sharedLabel.textContent = 'Viewing selections shared by user ' + sharedUserId.slice(0, 8) + '…';
+      var sharerName = getSharedName();
+      if (sharedLabel) {
+        sharedLabel.textContent = sharerName
+          ? 'Viewing selections shared by ' + sharerName
+          : 'Viewing selections shared by user ' + sharedUserId.slice(0, 8) + '…';
+      }
     }
     if (sharedBannerClose) {
       sharedBannerClose.addEventListener('click', function () {
@@ -373,6 +387,7 @@
     updatePassword:   updatePassword,
     getUser:          function () { return currentUser; },
     getSharedUserId:  getSharedUserId,
+    getSharedName:    getSharedName,
     loadSelections:   loadSelections,
     saveSelection:    saveSelection,
     removeSelection:  removeSelection,

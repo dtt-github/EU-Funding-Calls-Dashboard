@@ -298,6 +298,8 @@
 
     Auth._onSharedCleared = function () {
       sharedIds = new Set();
+      var user = Auth.getUser();
+      updateSelectionSubtitle(!!user);
       renderSelectedCalls();
       renderTable();
     };
@@ -329,6 +331,14 @@
     var el = document.getElementById('selection-subtitle');
     var label = document.getElementById('target-calls-label');
     if (!el) return;
+
+    var sharerName = (typeof Auth !== 'undefined') ? Auth.getSharedName() : null;
+    if (sharerName && label) {
+      label.textContent = sharerName + '\u2019s Target Calls';
+      el.textContent = 'You are viewing selections shared by ' + sharerName + '.';
+      return;
+    }
+
     if (loggedIn) {
       el.textContent = 'Your selections are saved to your account. Share them with the link button.';
       if (label) {
