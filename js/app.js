@@ -270,7 +270,8 @@
         localOnly.forEach(function (id) { Auth.saveSelection(id); });
         updateSelectionSubtitle(true);
       } else {
-        selectedIds = new Set(local);
+        selectedIds = new Set();
+        localStorage.removeItem('selectedCalls');
         updateSelectionSubtitle(false);
       }
       renderSelectedCalls();
