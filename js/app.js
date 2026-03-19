@@ -257,25 +257,33 @@
 
     Auth._showToast = showToast;
 
-    Auth._onAuthChange = async function (user) {
+    Auth._onAuthChange = function (user) {
       if (user) {
         var userKey = 'selectedCalls_' + user.id;
         var cached = [];
         try { cached = JSON.parse(localStorage.getItem(userKey) || '[]'); } catch (e) {}
-        var remote = await Auth.loadSelections(user.id);
-        var merged = new Set(cached.concat(remote));
-        selectedIds = merged;
-        saveSelections();
-        var remoteSet = new Set(remote);
-        cached.filter(function (id) { return !remoteSet.has(id); })
-          .forEach(function (id) { Auth.saveSelection(id); });
+        selectedIds = new Set(cached);
         updateSelectionSubtitle(true);
+        renderSelectedCalls();
+        renderTable();
+
+        Auth.loadSelections(user.id).then(function (remote) {
+          if (remote.length > 0) {
+            remote.forEach(function (id) { selectedIds.add(id); });
+            saveSelections();
+            renderSelectedCalls();
+            renderTable();
+          }
+          var remoteSet = new Set(remote);
+          cached.filter(function (id) { return !remoteSet.has(id); })
+            .forEach(function (id) { Auth.saveSelection(id); });
+        });
       } else {
         selectedIds = new Set();
         updateSelectionSubtitle(false);
+        renderSelectedCalls();
+        renderTable();
       }
-      renderSelectedCalls();
-      renderTable();
     };
 
     Auth._onSharedCleared = function () {
