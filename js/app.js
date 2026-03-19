@@ -315,10 +315,19 @@
 
   function updateSelectionSubtitle(loggedIn) {
     var el = document.getElementById('selection-subtitle');
+    var label = document.getElementById('target-calls-label');
     if (!el) return;
-    el.textContent = loggedIn
-      ? 'Your selections are saved to your account. Share them with the link button.'
-      : 'Click the \u2733 star on any call to add it here. Selections are saved in your browser.';
+    if (loggedIn) {
+      el.textContent = 'Your selections are saved to your account. Share them with the link button.';
+      if (label) {
+        var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+        var name = user && user.email ? user.email.split('@')[0] : 'My';
+        label.textContent = name + '\u2019s Target Calls';
+      }
+    } else {
+      el.textContent = 'Click the \u2733 star on any call to add it here. Selections are saved in your browser.';
+      if (label) label.textContent = 'My Target Calls';
+    }
   }
 
   /* ── Theme Toggle ── */

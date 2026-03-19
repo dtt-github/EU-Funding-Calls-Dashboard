@@ -511,6 +511,7 @@ a:hover { color: var(--accent-hover); }
   transition: all var(--transition);
   white-space: nowrap;
 }
+.btn svg { vertical-align: -2px; margin-right: 4px; }
 .btn--accent {
   background: var(--accent);
   color: #fff;

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=6">
+  <link rel="stylesheet" href="css/styles.css?v=14">
   <script>
     (function(){
       var saved = localStorage.getItem('theme');
@@ -19,8 +19,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-  <script src="js/config.js?v=6" defer></script>
-  <script src="js/auth.js?v=13" defer></script>
+  <script src="js/config.js?v=14" defer></script>
+  <script src="js/auth.js?v=14" defer></script>
 </head>
 <body>
   <!-- Auth header bar -->
@@ -102,13 +102,13 @@
     <div class="container">
       <div class="selected-calls__header">
         <div>
-          <h2 class="section-title"><span class="icon-star">&#9733;</span> My Target Calls <span class="selected-calls__count" id="selected-count">0</span></h2>
+          <h2 class="section-title"><span class="icon-star">&#9733;</span> <span id="target-calls-label">My Target Calls</span> <span class="selected-calls__count" id="selected-count">0</span></h2>
           <p class="section-subtitle" id="selection-subtitle">Click the &#9733; star on any call to add it here. Selections are saved in your browser.</p>
         </div>
         <div class="selected-actions visible" id="selected-actions">
-          <button class="btn btn--accent" id="share-selections-btn" style="display:none" title="Copy a link to share your selections">&#128279; Share</button>
-          <button class="btn btn--accent" id="export-selections" title="Copy selected topic IDs as JSON for selected.json">&#128203; Export IDs</button>
-          <button class="btn btn--ghost" id="clear-selections" title="Remove all selections">Clear All</button>
+          <button class="btn btn--accent" id="share-selections-btn" style="display:none" title="Copy a link to share your selections"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
+          <button class="btn btn--accent" id="export-selections" title="Copy selected topic IDs as JSON"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Export</button>
+          <button class="btn btn--ghost" id="clear-selections" title="Remove all selections"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Clear All</button>
         </div>
       </div>
       <div class="selected-calls__grid" id="selected-calls-grid"></div>
@@ -239,6 +239,6 @@
   </footer>
 
   <div class="toast" id="toast"></div>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/app.js?v=14"></script>
 </body>
 </html>
