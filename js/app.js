@@ -31,8 +31,9 @@
 
   /* ── Synonym Expansion Dictionary ── */
   const SYNONYMS = {
-    'construction':     ['building', 'buildings', 'renovation', 'built environment', 'civil engineering', 'structural', 'cement', 'concrete', 'demolition', 'infrastructure', 'modular', 'offsite', 'housing', 'neighbourhood', 'NEB'],
-    'building':         ['construction', 'buildings', 'renovation', 'built environment', 'structural', 'housing', 'energy efficiency'],
+    'construction':     ['building', 'buildings', 'renovation', 'built environment', 'civil engineering', 'structural', 'cement', 'concrete', 'demolition', 'infrastructure', 'modular', 'offsite', 'housing', 'neighbourhood', 'NEB', 'built4people', 'B4P', 'prefabrication', 'thermal comfort', 'deep renovation', 'energy performance'],
+    'building':         ['construction', 'buildings', 'renovation', 'built environment', 'structural', 'housing', 'energy efficiency', 'built4people', 'B4P', 'prefabrication', 'thermal comfort', 'deep renovation', 'energy performance', 'modular', 'neighbourhood', 'affordable'],
+    'housing':          ['building', 'buildings', 'construction', 'renovation', 'built environment', 'affordable', 'sustainable', 'built4people', 'B4P', 'neighbourhood', 'thermal comfort', 'homelessness', 'residential'],
     'infrastructure':   ['transport', 'urban', 'road', 'bridge', 'network', 'construction'],
     'ai':               ['artificial intelligence', 'machine learning', 'robot', 'automation', 'intelligent', 'GenAI', 'deep learning'],
     'artificial intelligence': ['ai', 'machine learning', 'robot', 'deep learning', 'neural network'],
@@ -193,43 +194,65 @@
     });
   }
 
+  function relevanceScore(call, terms) {
+    var searchable = [
+      call.title || '', call.keywords || '', call.cluster || '',
+      call._tags || '', call.programme || ''
+    ].join(' ').toLowerCase();
+    var score = 0;
+    terms.forEach(function (t) {
+      if (searchable.indexOf(t.term) !== -1) score += t.weight;
+    });
+    return score;
+  }
+
   function smartSearch(query) {
     if (!query.trim()) return null;
 
     var q = query.toLowerCase().trim();
 
-    var exactSet = new Set();
-    var exactResults = exactSubstringSearch(q);
-    exactResults.forEach(function (c) { exactSet.add(c.topicId); });
+    if (looksLikeId(q)) return exactSubstringSearch(q);
 
-    if (looksLikeId(q)) return exactResults;
-
-    var synonymResults = [];
-    var synonymSet = new Set();
     var syns = SYNONYMS[q];
     if (syns) {
-      syns.forEach(function (syn) {
-        var synLower = syn.toLowerCase();
-        allCalls.forEach(function (c) {
-          if (exactSet.has(c.topicId) || synonymSet.has(c.topicId)) return;
-          if (substringMatch(c.title, synLower) ||
-              substringMatch(c.keywords, synLower) ||
-              substringMatch(c.cluster, synLower)) {
-            synonymResults.push(c);
-            synonymSet.add(c.topicId);
-          }
-        });
+      var terms = [{ term: q, weight: 3 }];
+      syns.forEach(function (s) { terms.push({ term: s.toLowerCase(), weight: 1 }); });
+
+      var scored = [];
+      allCalls.forEach(function (c) {
+        var s = relevanceScore(c, terms);
+        if (s > 0) scored.push({ call: c, score: s });
       });
+      scored.sort(function (a, b) { return b.score - a.score; });
+
+      if (scored.length > 0) {
+        var fuzzyExtra = [];
+        if (fuseIndex) {
+          var seenIds = new Set(scored.map(function (r) { return r.call.topicId; }));
+          var expanded = expandQuery(q);
+          expanded.forEach(function (term) {
+            fuseIndex.search(term).forEach(function (h) {
+              if (!seenIds.has(h.item.topicId)) {
+                fuzzyExtra.push(h.item);
+                seenIds.add(h.item.topicId);
+              }
+            });
+          });
+        }
+        return scored.map(function (r) { return r.call; }).concat(fuzzyExtra);
+      }
     }
+
+    var exact = exactSubstringSearch(q);
+    var exactIds = new Set(exact.map(function (c) { return c.topicId; }));
 
     var fuzzyResults = [];
     if (fuseIndex) {
       var terms = expandQuery(q);
       var resultMap = new Map();
       terms.forEach(function (term) {
-        var hits = fuseIndex.search(term);
-        hits.forEach(function (h) {
-          if (exactSet.has(h.item.topicId) || synonymSet.has(h.item.topicId)) return;
+        fuseIndex.search(term).forEach(function (h) {
+          if (exactIds.has(h.item.topicId)) return;
           var existing = resultMap.get(h.item.topicId);
           if (!existing || h.score < existing.score) {
             resultMap.set(h.item.topicId, h);
@@ -241,7 +264,7 @@
         .map(function (r) { return r.item; });
     }
 
-    var combined = exactResults.concat(synonymResults, fuzzyResults);
+    var combined = exact.concat(fuzzyResults);
     return combined.length > 0 ? combined : null;
   }
 
