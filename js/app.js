@@ -695,8 +695,6 @@
   function goToPage(page) {
     currentPage = page;
     renderTable();
-    var tableTop = document.getElementById('topic-table-wrap');
-    if (tableTop) tableTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* ── Selection ── */
