@@ -693,8 +693,10 @@
   }
 
   function goToPage(page) {
+    var scrollY = window.scrollY;
     currentPage = page;
     renderTable();
+    window.scrollTo(0, scrollY);
   }
 
   /* ── Selection ── */
