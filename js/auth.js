@@ -83,15 +83,15 @@
 
   async function saveSelection(topicId) {
     var client = getClient();
-    if (!client || !currentUser) return false;
+    if (!client || !currentUser) return { ok: false, msg: 'Not authenticated' };
     var res = await client
       .from('selections')
       .insert({ user_id: currentUser.id, topic_id: topicId });
     if (res.error && res.error.code !== '23505') {
       console.error('saveSelection:', res.error);
-      return false;
+      return { ok: false, msg: res.error.message || res.error.code };
     }
-    return true;
+    return { ok: true };
   }
 
   async function removeSelection(topicId) {

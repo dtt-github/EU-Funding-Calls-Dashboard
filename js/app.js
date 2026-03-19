@@ -279,8 +279,8 @@
           if (localOnly.length > 0) {
             Promise.all(localOnly.map(function (id) { return Auth.saveSelection(id); }))
               .then(function (results) {
-                var failed = results.filter(function (ok) { return !ok; }).length;
-                if (failed > 0) showToast(failed + ' selection(s) failed to sync to server');
+                var failures = results.filter(function (r) { return !r.ok; });
+                if (failures.length > 0) showToast('Sync failed: ' + failures[0].msg);
               });
           }
         });
@@ -754,8 +754,8 @@
     } else {
       selectedIds.add(topicId);
       if (user) {
-        Auth.saveSelection(topicId).then(function (ok) {
-          if (!ok) showToast('Failed to save selection to server');
+        Auth.saveSelection(topicId).then(function (r) {
+          if (!r.ok) showToast('Save failed: ' + r.msg);
         });
       }
     }
