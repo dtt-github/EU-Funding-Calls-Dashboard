@@ -18,8 +18,46 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/auth.js" defer></script>
 </head>
 <body>
+  <!-- Auth header bar -->
+  <div class="auth-bar" id="auth-bar">
+    <div class="auth-bar__inner">
+      <button class="auth-bar__btn" id="auth-login-btn">Sign In</button>
+      <div class="auth-bar__user" id="auth-user-info" style="display:none">
+        <span class="auth-bar__email" id="auth-user-email"></span>
+        <button class="auth-bar__btn auth-bar__btn--ghost" id="auth-logout-btn">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared-view banner -->
+  <div class="shared-banner" id="shared-banner">
+    <span id="shared-banner-label">Viewing shared selections</span>
+    <button class="shared-banner__close" id="shared-banner-close">&times; Close shared view</button>
+  </div>
+
+  <!-- Login / Sign-up modal -->
+  <div class="login-modal" id="login-modal">
+    <div class="login-modal__card">
+      <button class="login-modal__close" id="login-modal-close">&times;</button>
+      <h2 class="login-modal__title">Sign In</h2>
+      <p class="login-modal__subtitle">Save your selections and share them with others.</p>
+      <form id="auth-form" autocomplete="on">
+        <label class="login-modal__label" for="auth-email">Email</label>
+        <input class="login-modal__input" id="auth-email" type="email" required placeholder="you@example.com" autocomplete="email">
+        <label class="login-modal__label" for="auth-password">Password</label>
+        <input class="login-modal__input" id="auth-password" type="password" required placeholder="••••••••" minlength="6" autocomplete="current-password">
+        <p class="login-modal__error" id="auth-error"></p>
+        <button class="btn btn--accent login-modal__submit" id="auth-submit" type="submit">Sign In</button>
+      </form>
+      <p class="login-modal__toggle" id="auth-toggle">Don't have an account? <strong>Sign up</strong></p>
+    </div>
+  </div>
+
   <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">
     <svg class="theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
     <svg class="theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -65,9 +103,10 @@
       <div class="selected-calls__header">
         <div>
           <h2 class="section-title"><span class="icon-star">&#9733;</span> My Target Calls <span class="selected-calls__count" id="selected-count">0</span></h2>
-          <p class="section-subtitle">Click the &#9733; star on any call to add it here. Selections are saved in your browser.</p>
+          <p class="section-subtitle" id="selection-subtitle">Click the &#9733; star on any call to add it here. Selections are saved in your browser.</p>
         </div>
         <div class="selected-actions visible" id="selected-actions">
+          <button class="btn btn--accent" id="share-selections-btn" style="display:none" title="Copy a link to share your selections">&#128279; Share</button>
           <button class="btn btn--accent" id="export-selections" title="Copy selected topic IDs as JSON for selected.json">&#128203; Export IDs</button>
           <button class="btn btn--ghost" id="clear-selections" title="Remove all selections">Clear All</button>
         </div>

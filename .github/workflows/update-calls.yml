@@ -1,0 +1,31 @@
+name: Update EU Funding Calls
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Every Monday at 06:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch latest calls from EU SEDIA API
+        run: python3 scripts/fetch_calls.py
+
+      - name: Commit and push if data changed
+        run: |
+          git diff --quiet data/calls.json && echo "No changes" && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/calls.json
+          git commit -m "Auto-update call data from EU SEDIA API"
+          git push

@@ -18,12 +18,14 @@ A fast, intelligent, static dashboard for all open and forthcoming EU Funding & 
 - **Pagination** — 25 calls per page with full page navigation
 - Filters, search, and tabs all work together and reset pagination automatically
 
-### Call Selection
+### Call Selection & Sharing
 - **Click the ★ star** on any call to mark it as a target
 - Selected calls appear in a prominent "My Target Calls" section at the top
+- **Sign in** with email + password (Supabase) to save selections to your account
+- **Share your selections** — click the Share button to copy a link; recipients see your picks highlighted in blue
+- Multiple users can maintain independent selections on the same dashboard
 - **Export IDs** button copies selected topic IDs as JSON to clipboard
-- Paste exported IDs into `data/selected.json` and commit — all site visitors will see your selections
-- Selections persist in browser `localStorage` across sessions
+- Falls back to browser `localStorage` when not signed in
 
 ### Data & Visualization
 - **939 calls** fetched live from the [EU SEDIA API](https://api.tech.ec.europa.eu/search-api/prod/rest/search)
@@ -47,23 +49,28 @@ python3 -m http.server 8000
 # Then visit http://localhost:8000
 ```
 
-## Marking Calls You're Applying For
+## User Authentication (Supabase)
 
-### Option 1: Interactive (in the browser)
-Click the ★ star icon on any row in the Call Explorer table. Your selections are saved in your browser's `localStorage` and appear in the "My Target Calls" section.
+The dashboard uses [Supabase](https://supabase.com/) for email + password authentication and per-user selections stored in PostgreSQL.
 
-### Option 2: Git-committed (visible to all visitors)
-1. Click **Export IDs** in the "My Target Calls" section to copy your selected topic IDs
-2. Paste them into `data/selected.json`:
+### Setup
 
-```json
-[
-  "HORIZON-CL4-2026-05-DIGITAL-EMERGING-02",
-  "HORIZON-HLTH-2026-01-DISEASE-04"
-]
-```
+1. Create a Supabase project at [supabase.com](https://supabase.com/)
+2. Run `scripts/supabase-setup.sql` in the Supabase SQL Editor to create the `selections` table and RLS policies
+3. Copy your **Project URL** and **anon public key** from Settings → API
+4. Paste them into `js/config.js`
+5. Commit and push — authentication is now live
 
-3. Commit and push — all visitors will see these calls highlighted
+### Sharing Selections
+
+1. Sign in → select calls with ★ star → click **Share**
+2. A link like `https://...?shared=USER_ID` is copied to your clipboard
+3. Anyone opening the link sees your selections highlighted in blue (read-only)
+4. They can sign in themselves to make their own selections alongside yours
+
+### Anonymous Fallback
+
+Without signing in, selections are saved in browser `localStorage` and work the same as before.
 
 ## Deploying to GitHub Pages
 
@@ -74,10 +81,15 @@ Click the ★ star icon on any row in the Call Explorer table. Your selections a
 
 ## Refreshing Call Data
 
-Call data is stored in `data/calls.json`. To refresh it from the EU SEDIA API:
+### Automatic (GitHub Actions)
+
+A workflow at `.github/workflows/update-calls.yml` runs **every Monday at 06:00 UTC** and fetches fresh data from the EU SEDIA API. If the data changed, it auto-commits and pushes — GitHub Pages redeploys automatically.
+
+You can also trigger it manually from the repo's **Actions** tab → "Update EU Funding Calls" → **Run workflow**.
+
+### Manual
 
 ```bash
-# Fetch all open + forthcoming grant calls across all EU programmes
 python3 scripts/fetch_calls.py
 ```
 
@@ -89,14 +101,19 @@ This queries the official EU Search API at `api.tech.ec.europa.eu` with:
 ## Project Structure
 
 ```
-├── index.html              Single-page dashboard
-├── css/styles.css           All styles (dark/light themes, responsive)
-├── js/app.js                Search, filters, pagination, selection, charts
+├── index.html                  Single-page dashboard
+├── css/styles.css              All styles (dark/light themes, responsive)
+├── js/
+│   ├── app.js                  Search, filters, pagination, selection, charts
+│   ├── auth.js                 Supabase auth + selection CRUD
+│   └── config.js               Supabase project URL + anon key
 ├── data/
-│   ├── calls.json           All 939 call entries (minified)
-│   └── selected.json        Your selected call IDs (git-committed)
+│   └── calls.json              All 939 call entries (minified)
 ├── scripts/
-│   └── fetch_calls.py       Script to refresh call data from SEDIA API
+│   ├── fetch_calls.py          Script to refresh call data from SEDIA API
+│   └── supabase-setup.sql      SQL to create selections table + RLS
+├── .github/workflows/
+│   └── update-calls.yml        Weekly auto-refresh via GitHub Actions
 └── README.md
 ```
 
@@ -126,6 +143,8 @@ Each call in `calls.json` has:
 - **Vanilla JavaScript** — no build step, no transpilation
 - **[Chart.js 4](https://www.chartjs.org/)** — doughnut charts (CDN)
 - **[Fuse.js 7](https://www.fusejs.io/)** — fuzzy search (CDN)
+- **[Supabase JS v2](https://supabase.com/docs/reference/javascript)** — auth + database (CDN)
+- **GitHub Actions** — automated weekly data refresh
 - **[EU SEDIA API](https://api.tech.ec.europa.eu/)** — data source
 
 ## Data Source

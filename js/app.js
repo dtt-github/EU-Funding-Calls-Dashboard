@@ -94,6 +94,7 @@
 
   let allCalls = [];
   let selectedIds = new Set();
+  let sharedIds = new Set();
   let activeProgrammeTab = 'all';
   let activeFilters = { programme: new Set(), status: new Set(), type: new Set(), stage: new Set() };
   let searchQuery = '';
@@ -191,15 +192,12 @@
   }
 
   async function init() {
-    var [callsResp, selResp] = await Promise.all([
-      fetch('data/calls.json'),
-      fetch('data/selected.json')
-    ]);
+    var callsResp = await fetch('data/calls.json');
     allCalls = await callsResp.json();
-    var selArr = await selResp.json();
+
     var localSel = [];
     try { localSel = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
-    selectedIds = new Set(selArr.concat(localSel));
+    selectedIds = new Set(localSel);
 
     enrichCalls(allCalls);
 
@@ -223,6 +221,54 @@
     bindEvents();
     initThemeToggle();
     buildFuseIndex();
+    initAuth();
+  }
+
+  /* ── Auth Integration ── */
+  function initAuth() {
+    if (typeof Auth === 'undefined' || !Auth.isConfigured()) return;
+
+    Auth._showToast = showToast;
+
+    Auth._onAuthChange = async function (user) {
+      if (user) {
+        var ids = await Auth.loadSelections(user.id);
+        selectedIds = new Set(ids);
+        updateSelectionSubtitle(true);
+      } else {
+        var local = [];
+        try { local = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
+        selectedIds = new Set(local);
+        updateSelectionSubtitle(false);
+      }
+      renderSelectedCalls();
+      renderTable();
+    };
+
+    Auth._onSharedCleared = function () {
+      sharedIds = new Set();
+      renderSelectedCalls();
+      renderTable();
+    };
+
+    Auth.initUI();
+
+    var shared = Auth.getSharedUserId();
+    if (shared) {
+      Auth.loadSelections(shared).then(function (ids) {
+        sharedIds = new Set(ids);
+        renderSelectedCalls();
+        renderTable();
+      });
+    }
+  }
+
+  function updateSelectionSubtitle(loggedIn) {
+    var el = document.getElementById('selection-subtitle');
+    if (!el) return;
+    el.textContent = loggedIn
+      ? 'Your selections are saved to your account. Share them with the link button.'
+      : 'Click the \u2733 star on any call to add it here. Selections are saved in your browser.';
   }
 
   /* ── Theme Toggle ── */
@@ -295,13 +341,22 @@
     var grid = document.getElementById('selected-calls-grid');
     var actions = document.getElementById('selected-actions');
     var countEl = document.getElementById('selected-count');
-    if (selectedIds.size === 0) { section.classList.remove('visible'); return; }
-    var selected = allCalls.filter(function (c) { return selectedIds.has(c.topicId); });
-    if (selected.length === 0) { section.classList.remove('visible'); return; }
+
+    var mySelected = allCalls.filter(function (c) { return selectedIds.has(c.topicId); });
+    var sharedOnly = allCalls.filter(function (c) { return sharedIds.has(c.topicId) && !selectedIds.has(c.topicId); });
+    var total = mySelected.length + sharedOnly.length;
+
+    if (total === 0 && selectedIds.size === 0 && sharedIds.size === 0) {
+      section.classList.remove('visible');
+      return;
+    }
     section.classList.add('visible');
-    if (countEl) countEl.textContent = selected.length;
-    if (actions) actions.classList.add('visible');
-    grid.innerHTML = selected.map(function (c) {
+    if (countEl) countEl.textContent = mySelected.length || 0;
+    if (actions) actions.classList.toggle('visible', mySelected.length > 0);
+
+    var html = '';
+
+    html += mySelected.map(function (c) {
       return '<div class="sel-card">' +
         '<button class="sel-card__remove" data-topic="' + esc(c.topicId) + '" aria-label="Remove" title="Remove from selections">&times;</button>' +
         '<div class="sel-card__topicId">' + esc(c.topicId) + '</div>' +
@@ -315,6 +370,25 @@
         '<a class="sel-card__link" href="' + c.portalUrl + '" target="_blank" rel="noopener">View on EU Portal &rarr;</a>' +
       '</div>';
     }).join('');
+
+    if (sharedOnly.length > 0) {
+      html += '<div class="sel-card sel-card--shared-divider"><span>Shared user\'s selections</span></div>';
+      html += sharedOnly.map(function (c) {
+        return '<div class="sel-card sel-card--shared">' +
+          '<div class="sel-card__topicId">' + esc(c.topicId) + '</div>' +
+          '<div class="sel-card__title">' + esc(c.title) + '</div>' +
+          '<div class="sel-card__meta">' +
+            (c.actionType ? '<span class="badge ' + badgeClass(c.actionType) + '">' + esc(c.actionType) + '</span>' : '') +
+            '<span class="badge badge-' + c.callStatus + '">' + esc(c.callStatus) + '</span>' +
+            (c.deadline ? '<span class="badge badge-stage">' + formatDeadline(c.deadline) + '</span>' : '') +
+            '<span class="badge badge-programme">' + esc(PROG_SHORT[c.programme] || c.programme) + '</span>' +
+          '</div>' +
+          '<a class="sel-card__link" href="' + c.portalUrl + '" target="_blank" rel="noopener">View on EU Portal &rarr;</a>' +
+        '</div>';
+      }).join('');
+    }
+
+    grid.innerHTML = html;
 
     grid.querySelectorAll('.sel-card__remove').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -464,8 +538,8 @@
 
     if (!isSearching) {
       filtered.sort(function (a, b) {
-        var selA = selectedIds.has(a.topicId) ? 0 : 1;
-        var selB = selectedIds.has(b.topicId) ? 0 : 1;
+        var selA = selectedIds.has(a.topicId) ? 0 : (sharedIds.has(a.topicId) ? 1 : 2);
+        var selB = selectedIds.has(b.topicId) ? 0 : (sharedIds.has(b.topicId) ? 1 : 2);
         if (selA !== selB) return selA - selB;
         if (a.deadline !== b.deadline) return (a.deadline || 'z').localeCompare(b.deadline || 'z');
         return a.topicId.localeCompare(b.topicId);
@@ -513,8 +587,9 @@
       }
 
       var isSel = selectedIds.has(c.topicId);
-      var rowClass = isSel ? ' class="row-selected"' : '';
-      var starClass = isSel ? ' star-btn--active' : '';
+      var isShared = sharedIds.has(c.topicId);
+      var rowClass = isSel ? ' class="row-selected"' : (isShared ? ' class="row-shared"' : '');
+      var starClass = isSel ? ' star-btn--active' : (isShared ? ' star-btn--shared' : '');
       var starLabel = isSel ? 'Remove from selections' : 'Add to selections';
       var statusBadge = '<span class="badge badge-' + c.callStatus + '">' + esc(c.callStatus) + '</span>';
       var typeBadge = c.actionType ? '<span class="badge ' + badgeClass(c.actionType) + '">' + esc(c.actionType) + '</span>' : '';
@@ -591,10 +666,13 @@
 
   /* ── Selection ── */
   function toggleSelection(topicId) {
+    var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
     if (selectedIds.has(topicId)) {
       selectedIds.delete(topicId);
+      if (user) Auth.removeSelection(topicId);
     } else {
       selectedIds.add(topicId);
+      if (user) Auth.saveSelection(topicId);
     }
     saveSelections();
     renderSelectedCalls();
@@ -602,7 +680,10 @@
   }
 
   function saveSelections() {
-    localStorage.setItem('selectedCalls', JSON.stringify(Array.from(selectedIds)));
+    var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+    if (!user) {
+      localStorage.setItem('selectedCalls', JSON.stringify(Array.from(selectedIds)));
+    }
   }
 
   function exportSelections() {
