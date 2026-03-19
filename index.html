@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EU Funding Calls Dashboard — Open &amp; Forthcoming</title>
+  <meta name="description" content="Fast, searchable dashboard for EU Funding &amp; Tenders calls. 939 open and forthcoming topics across Horizon Europe, Digital Europe, EDF, Erasmus+ and 25+ programmes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script>
+    (function(){
+      var saved = localStorage.getItem('theme');
+      var pref = saved || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', pref);
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js" defer></script>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme">
+    <svg class="theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg class="theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <p class="hero__badge">EU Funding &amp; Tenders</p>
+      <h1 class="hero__title">Call Intelligence Dashboard</h1>
+      <p class="hero__subtitle" id="hero-subtitle">Loading calls&hellip;</p>
+      <div class="hero__stats">
+        <div class="stat-card">
+          <span class="stat-card__value" id="stat-topics">0</span>
+          <span class="stat-card__label">Total Calls</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__value" id="stat-open">0</span>
+          <span class="stat-card__label">Open</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__value" id="stat-forthcoming">0</span>
+          <span class="stat-card__label">Forthcoming</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__value" id="stat-programmes">0</span>
+          <span class="stat-card__label">Programmes</span>
+        </div>
+      </div>
+      <div class="countdown" id="countdown">
+        <p class="countdown__label">Next deadline &mdash; <span id="countdown-date"></span></p>
+        <div class="countdown__boxes">
+          <div class="countdown__unit"><span id="cd-days">--</span><small>Days</small></div>
+          <div class="countdown__unit"><span id="cd-hours">--</span><small>Hours</small></div>
+          <div class="countdown__unit"><span id="cd-mins">--</span><small>Min</small></div>
+          <div class="countdown__unit"><span id="cd-secs">--</span><small>Sec</small></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="selected-calls" id="selected-calls">
+    <div class="container">
+      <div class="selected-calls__header">
+        <div>
+          <h2 class="section-title"><span class="icon-star">&#9733;</span> My Target Calls <span class="selected-calls__count" id="selected-count">0</span></h2>
+          <p class="section-subtitle">Click the &#9733; star on any call to add it here. Selections are saved in your browser.</p>
+        </div>
+        <div class="selected-actions visible" id="selected-actions">
+          <button class="btn btn--accent" id="export-selections" title="Copy selected topic IDs as JSON for selected.json">&#128203; Export IDs</button>
+          <button class="btn btn--ghost" id="clear-selections" title="Remove all selections">Clear All</button>
+        </div>
+      </div>
+      <div class="selected-calls__grid" id="selected-calls-grid"></div>
+    </div>
+  </section>
+
+  <section class="overview" id="overview">
+    <div class="container">
+      <h2 class="section-title">Overview</h2>
+      <p class="section-subtitle">Breakdown across all open &amp; forthcoming calls</p>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>By Programme</h3>
+          <canvas id="chart-programme"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>By Status</h3>
+          <canvas id="chart-status"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>By Action Type</h3>
+          <canvas id="chart-type"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="explorer" id="explorer">
+    <div class="container">
+      <h2 class="section-title">Call Explorer</h2>
+      <p class="section-subtitle">Browse, search and filter all calls</p>
+
+      <div class="search-bar">
+        <svg class="search-bar__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="search-input" class="search-bar__input" placeholder="Search by topic ID, title, keyword, industry&hellip;" autocomplete="off">
+        <span class="search-bar__count" id="search-count"></span>
+        <button class="search-bar__clear" id="search-clear" title="Clear search">&times;</button>
+      </div>
+
+      <div class="filters">
+        <div class="filter-group">
+          <span class="filter-group__label">Programme</span>
+          <div class="filter-pills" id="filter-programme"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group__label">Status</span>
+          <div class="filter-pills" id="filter-status"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group__label">Action Type</span>
+          <div class="filter-pills" id="filter-type"></div>
+        </div>
+        <div class="filter-group">
+          <span class="filter-group__label">Stage</span>
+          <div class="filter-pills" id="filter-stage"></div>
+        </div>
+        <button class="filters__clear" id="filters-clear">Clear All Filters</button>
+      </div>
+
+      <div class="programme-tabs" id="programme-tabs"></div>
+      <div class="topic-table-wrap" id="topic-table-wrap">
+        <table class="topic-table">
+          <thead>
+            <tr>
+              <th class="col-star"></th>
+              <th class="col-id">Topic ID</th>
+              <th class="col-title">Title</th>
+              <th class="col-type">Type / Status</th>
+              <th class="col-programme">Programme</th>
+              <th class="col-deadline">Deadline</th>
+            </tr>
+          </thead>
+          <tbody id="topic-tbody"></tbody>
+        </table>
+        <p class="no-results" id="no-results">No topics match your filters.</p>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tips" id="tips">
+    <div class="container">
+      <h2 class="section-title">Key Tips &amp; Resources</h2>
+      <div class="tips-grid">
+        <div class="tip-card">
+          <h3>AI Disclosure</h3>
+          <p>Since 2024, Horizon Europe requires disclosure of AI use in proposal writing. Include a clear statement in Part B about any generative AI tools used and how outputs were verified.</p>
+        </div>
+        <div class="tip-card">
+          <h3>Evaluation Criteria</h3>
+          <p>Standard weighting: Excellence (50%), Impact (30%), Implementation (20%). Each criterion scored 0&ndash;5. Minimum 4/5 for Excellence and 3/5 for Impact &amp; Implementation.</p>
+        </div>
+        <div class="tip-card">
+          <h3>Consortium Requirements</h3>
+          <p>Most RIA/IA calls need minimum 3 independent legal entities from 3 different EU Member States or Associated Countries. Prioritise complementary expertise.</p>
+        </div>
+        <div class="tip-card">
+          <h3>Budget Planning</h3>
+          <p>RIA funding rate: 100% of eligible costs. IA: 70% (100% for non-profits). Use direct personnel costs + 25% flat rate for indirect costs.</p>
+        </div>
+        <div class="tip-card">
+          <h3>Two-Stage Calls</h3>
+          <p>April deadlines for CL5/CL6 two-stage calls are for short proposals (~10 pages). Focus on concept, novelty and consortium rationale. Full proposals invited for Stage 2.</p>
+        </div>
+        <div class="tip-card">
+          <h3>Submit Early</h3>
+          <p>Submit at least 48 hours before the deadline to allow buffer for technical issues with the EU Funding &amp; Tenders Portal.</p>
+        </div>
+      </div>
+      <div class="resources">
+        <h3>Useful Links</h3>
+        <div class="resources__grid">
+          <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals" target="_blank" rel="noopener">EU Funding &amp; Tenders Portal</a>
+          <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/how-to-participate/reference-documents" target="_blank" rel="noopener">Work Programme 2025&ndash;27</a>
+          <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/support/ncp" target="_blank" rel="noopener">National Contact Points</a>
+          <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/how-to-participate/partner-search" target="_blank" rel="noopener">Partner Search</a>
+          <a href="https://research-and-innovation.ec.europa.eu/document/download/2b6cf7e5-36ac-41cb-aab5-0d32050143dc_en" target="_blank" rel="noopener">AI Use Guidelines</a>
+          <a href="https://cordis.europa.eu/" target="_blank" rel="noopener">CORDIS</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Data sourced from the <a href="https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals" target="_blank" rel="noopener">EU Funding &amp; Tenders Portal</a> and European Commission Work Programmes 2025&ndash;27.</p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
