@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=14">
+  <link rel="stylesheet" href="css/styles.css?v=15">
   <script>
     (function(){
       var saved = localStorage.getItem('theme');
@@ -19,8 +19,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" defer></script>
-  <script src="js/config.js?v=14" defer></script>
-  <script src="js/auth.js?v=14" defer></script>
+  <script src="js/config.js?v=15" defer></script>
+  <script src="js/auth.js?v=15" defer></script>
 </head>
 <body>
   <!-- Auth header bar -->
@@ -29,6 +29,7 @@
       <button class="auth-bar__btn" id="auth-login-btn">Sign In</button>
       <div class="auth-bar__user" id="auth-user-info" style="display:none">
         <span class="auth-bar__email" id="auth-user-email"></span>
+        <button class="auth-bar__btn auth-bar__btn--ghost" id="auth-profile-btn" title="Profile settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile</button>
         <button class="auth-bar__btn auth-bar__btn--ghost" id="auth-logout-btn">Sign Out</button>
       </div>
     </div>
@@ -47,6 +48,10 @@
       <h2 class="login-modal__title">Sign In</h2>
       <p class="login-modal__subtitle">Save your selections and share them with others.</p>
       <form id="auth-form" autocomplete="on">
+        <div id="auth-name-group" style="display:none">
+          <label class="login-modal__label" for="auth-fullname">Full Name</label>
+          <input class="login-modal__input" id="auth-fullname" type="text" placeholder="Jane Doe" autocomplete="name">
+        </div>
         <label class="login-modal__label" for="auth-email">Email</label>
         <input class="login-modal__input" id="auth-email" type="email" required placeholder="you@example.com" autocomplete="email">
         <label class="login-modal__label" for="auth-password">Password</label>
@@ -55,6 +60,29 @@
         <button class="btn btn--accent login-modal__submit" id="auth-submit" type="submit">Sign In</button>
       </form>
       <p class="login-modal__toggle" id="auth-toggle">Don't have an account? <strong>Sign up</strong></p>
+    </div>
+  </div>
+
+  <!-- Profile modal -->
+  <div class="login-modal" id="profile-modal">
+    <div class="login-modal__card">
+      <button class="login-modal__close" id="profile-modal-close">&times;</button>
+      <h2 class="login-modal__title">Profile Settings</h2>
+      <p class="login-modal__subtitle">Update your display name or change your password.</p>
+      <form id="profile-name-form" autocomplete="off">
+        <label class="login-modal__label" for="profile-fullname">Full Name</label>
+        <input class="login-modal__input" id="profile-fullname" type="text" placeholder="Jane Doe" autocomplete="name">
+        <button class="btn btn--accent login-modal__submit" id="profile-name-submit" type="submit">Save Name</button>
+      </form>
+      <hr class="profile-divider">
+      <form id="profile-password-form" autocomplete="off">
+        <label class="login-modal__label" for="profile-new-password">New Password</label>
+        <input class="login-modal__input" id="profile-new-password" type="password" placeholder="••••••••" minlength="6" autocomplete="new-password">
+        <label class="login-modal__label" for="profile-confirm-password">Confirm Password</label>
+        <input class="login-modal__input" id="profile-confirm-password" type="password" placeholder="••••••••" minlength="6" autocomplete="new-password">
+        <p class="login-modal__error" id="profile-error"></p>
+        <button class="btn btn--accent login-modal__submit" id="profile-pw-submit" type="submit">Change Password</button>
+      </form>
     </div>
   </div>
 
@@ -239,6 +267,6 @@
   </footer>
 
   <div class="toast" id="toast"></div>
-  <script src="js/app.js?v=14"></script>
+  <script src="js/app.js?v=15"></script>
 </body>
 </html>

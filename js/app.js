@@ -292,6 +292,10 @@
       }
     };
 
+    Auth._onProfileUpdate = function () {
+      updateSelectionSubtitle(true);
+    };
+
     Auth._onSharedCleared = function () {
       sharedIds = new Set();
       renderSelectedCalls();
@@ -313,6 +317,14 @@
     }
   }
 
+  function getUserDisplayName() {
+    var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+    if (!user) return null;
+    if (user.user_metadata && user.user_metadata.full_name) return user.user_metadata.full_name;
+    if (user.email) return user.email.split('@')[0];
+    return null;
+  }
+
   function updateSelectionSubtitle(loggedIn) {
     var el = document.getElementById('selection-subtitle');
     var label = document.getElementById('target-calls-label');
@@ -320,8 +332,7 @@
     if (loggedIn) {
       el.textContent = 'Your selections are saved to your account. Share them with the link button.';
       if (label) {
-        var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
-        var name = user && user.email ? user.email.split('@')[0] : 'My';
+        var name = getUserDisplayName() || 'My';
         label.textContent = name + '\u2019s Target Calls';
       }
     } else {

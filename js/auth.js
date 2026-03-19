@@ -30,10 +30,12 @@
 
   /* ── Auth helpers ── */
 
-  async function signUp(email, password) {
+  async function signUp(email, password, fullName) {
     var client = getClient();
     if (!client) throw new Error('Supabase not configured');
-    var res = await client.auth.signUp({ email: email, password: password });
+    var opts = { email: email, password: password };
+    if (fullName) opts.options = { data: { full_name: fullName } };
+    var res = await client.auth.signUp(opts);
     if (res.error) throw res.error;
     return res.data;
   }
@@ -50,6 +52,23 @@
     var client = getClient();
     if (!client) return;
     await client.auth.signOut();
+  }
+
+  async function updateProfile(fullName) {
+    var client = getClient();
+    if (!client || !currentUser) throw new Error('Not authenticated');
+    var res = await client.auth.updateUser({ data: { full_name: fullName } });
+    if (res.error) throw res.error;
+    currentUser = res.data.user;
+    return res.data.user;
+  }
+
+  async function updatePassword(newPassword) {
+    var client = getClient();
+    if (!client || !currentUser) throw new Error('Not authenticated');
+    var res = await client.auth.updateUser({ password: newPassword });
+    if (res.error) throw res.error;
+    return true;
   }
 
   async function getSession() {
@@ -141,6 +160,13 @@
     var shareBtn = document.getElementById('share-selections-btn');
     var sharedBanner = document.getElementById('shared-banner');
     var sharedBannerClose = document.getElementById('shared-banner-close');
+    var nameGroup = document.getElementById('auth-name-group');
+    var profileBtn = document.getElementById('auth-profile-btn');
+    var profileModal = document.getElementById('profile-modal');
+    var profileClose = document.getElementById('profile-modal-close');
+    var profileNameForm = document.getElementById('profile-name-form');
+    var profilePwForm = document.getElementById('profile-password-form');
+    var profileError = document.getElementById('profile-error');
 
     if (!loginBtn) return;
 
@@ -170,6 +196,7 @@
       authToggle.innerHTML = isSignUp
         ? 'Already have an account? <strong>Sign in</strong>'
         : "Don't have an account? <strong>Sign up</strong>";
+      if (nameGroup) nameGroup.style.display = isSignUp ? 'block' : 'none';
       authError.textContent = '';
     });
 
@@ -177,13 +204,14 @@
       e.preventDefault();
       var email = document.getElementById('auth-email').value.trim();
       var pass = document.getElementById('auth-password').value;
+      var fullName = isSignUp ? (document.getElementById('auth-fullname').value.trim() || '') : '';
       authError.textContent = '';
       authSubmit.disabled = true;
       authSubmit.textContent = 'Please wait…';
 
       try {
         if (isSignUp) {
-          await signUp(email, pass);
+          await signUp(email, pass, fullName);
           authError.style.color = 'var(--type-csa)';
           authError.textContent = 'Check your email for a confirmation link!';
         } else {
@@ -202,6 +230,75 @@
     logoutBtn.addEventListener('click', async function () {
       await signOut();
     });
+
+    /* ── Profile modal ── */
+    if (profileBtn && profileModal) {
+      profileBtn.addEventListener('click', function () {
+        profileError.textContent = '';
+        var nameInput = document.getElementById('profile-fullname');
+        if (nameInput && currentUser) {
+          nameInput.value = (currentUser.user_metadata && currentUser.user_metadata.full_name) || '';
+        }
+        profileModal.classList.add('visible');
+      });
+
+      profileClose.addEventListener('click', function () {
+        profileModal.classList.remove('visible');
+      });
+
+      profileModal.addEventListener('click', function (e) {
+        if (e.target === profileModal) profileModal.classList.remove('visible');
+      });
+
+      profileNameForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var nameVal = document.getElementById('profile-fullname').value.trim();
+        var btn = document.getElementById('profile-name-submit');
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        profileError.textContent = '';
+        try {
+          var updated = await updateProfile(nameVal);
+          currentUser = updated;
+          if (userEmail) userEmail.textContent = nameVal || updated.email;
+          if (window.Auth._showToast) window.Auth._showToast('Name updated!');
+          if (window.Auth._onProfileUpdate) window.Auth._onProfileUpdate(updated);
+        } catch (err) {
+          profileError.style.color = 'var(--type-ppi)';
+          profileError.textContent = err.message || 'Failed to update name';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Save Name';
+      });
+
+      profilePwForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var newPw = document.getElementById('profile-new-password').value;
+        var confirmPw = document.getElementById('profile-confirm-password').value;
+        var btn = document.getElementById('profile-pw-submit');
+        profileError.textContent = '';
+
+        if (newPw !== confirmPw) {
+          profileError.style.color = 'var(--type-ppi)';
+          profileError.textContent = 'Passwords do not match';
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Updating…';
+        try {
+          await updatePassword(newPw);
+          if (window.Auth._showToast) window.Auth._showToast('Password changed!');
+          document.getElementById('profile-new-password').value = '';
+          document.getElementById('profile-confirm-password').value = '';
+        } catch (err) {
+          profileError.style.color = 'var(--type-ppi)';
+          profileError.textContent = err.message || 'Failed to change password';
+        }
+        btn.disabled = false;
+        btn.textContent = 'Change Password';
+      });
+    }
 
     if (shareBtn) {
       shareBtn.addEventListener('click', function () {
@@ -232,12 +329,16 @@
       });
     }
 
+    function displayName(user) {
+      return (user.user_metadata && user.user_metadata.full_name) || user.email;
+    }
+
     onAuthStateChange(function (user) {
       currentUser = user;
       if (user) {
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
-        userEmail.textContent = user.email;
+        userEmail.textContent = displayName(user);
         if (shareBtn) shareBtn.style.display = 'inline-flex';
       } else {
         loginBtn.style.display = 'inline-flex';
@@ -254,7 +355,7 @@
         currentUser = session.user;
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
-        userEmail.textContent = session.user.email;
+        userEmail.textContent = displayName(session.user);
         if (shareBtn) shareBtn.style.display = 'inline-flex';
         if (window.Auth._onAuthChange) window.Auth._onAuthChange(session.user);
       }
@@ -268,6 +369,8 @@
     signUp:           signUp,
     signIn:           signIn,
     signOut:          signOut,
+    updateProfile:    updateProfile,
+    updatePassword:   updatePassword,
     getUser:          function () { return currentUser; },
     getSharedUserId:  getSharedUserId,
     loadSelections:   loadSelections,
@@ -276,6 +379,7 @@
     onAuthStateChange: onAuthStateChange,
     _onAuthChange:    null,
     _onSharedCleared: null,
+    _onProfileUpdate: null,
     _showToast:       null
   };
 })();

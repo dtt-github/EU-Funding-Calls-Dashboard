@@ -323,6 +323,11 @@ a:hover { color: var(--accent-hover); }
 }
 .login-modal__toggle strong { color: var(--accent); }
 .login-modal__toggle:hover strong { text-decoration: underline; }
+.profile-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
 
 /* ── Theme Toggle ── */
 .theme-toggle {
