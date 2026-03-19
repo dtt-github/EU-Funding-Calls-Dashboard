@@ -759,6 +759,20 @@ a:hover { color: var(--accent-hover); }
 .col-programme { min-width: 110px; white-space: nowrap; }
 .col-deadline { min-width: 100px; white-space: nowrap; }
 
+/* Sortable headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+}
+.sortable-th:hover { color: var(--text-primary); }
+.sort-arrow { display: inline-block; margin-left: 4px; font-size: .6rem; opacity: 0; transition: opacity var(--transition); }
+.sortable-th:hover .sort-arrow { opacity: .4; }
+.sortable-th:hover .sort-arrow::after { content: '\25B2'; }
+.sort-active .sort-arrow { opacity: 1; }
+.sort-asc .sort-arrow::after { content: '\25B2'; }
+.sort-desc .sort-arrow::after { content: '\25BC'; }
+
 /* Star button */
 .star-btn {
   background: none;

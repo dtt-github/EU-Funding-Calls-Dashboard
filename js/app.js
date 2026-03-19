@@ -99,6 +99,8 @@
   let activeFilters = { programme: new Set(), status: new Set(), type: new Set(), stage: new Set() };
   let searchQuery = '';
   let currentPage = 1;
+  let sortColumn = 'deadline';
+  let sortDirection = 'asc';
   let chartInstances = [];
   let fuseIndex = null;
 
@@ -537,16 +539,35 @@
     }
 
     if (!isSearching) {
+      var dir = sortDirection === 'asc' ? 1 : -1;
       filtered.sort(function (a, b) {
         var selA = selectedIds.has(a.topicId) ? 0 : (sharedIds.has(a.topicId) ? 1 : 2);
         var selB = selectedIds.has(b.topicId) ? 0 : (sharedIds.has(b.topicId) ? 1 : 2);
         if (selA !== selB) return selA - selB;
-        if (a.deadline !== b.deadline) return (a.deadline || 'z').localeCompare(b.deadline || 'z');
+        var cmp = compareByColumn(a, b, sortColumn);
+        if (cmp !== 0) return cmp * dir;
         return a.topicId.localeCompare(b.topicId);
       });
     }
 
     return filtered;
+  }
+
+  function compareByColumn(a, b, col) {
+    switch (col) {
+      case 'topicId':
+        return a.topicId.localeCompare(b.topicId);
+      case 'title':
+        return (a.title || '').localeCompare(b.title || '');
+      case 'type':
+        return (a.actionType || '').localeCompare(b.actionType || '');
+      case 'programme':
+        return (a.programme || '').localeCompare(b.programme || '');
+      case 'deadline':
+        return (a.deadline || 'z').localeCompare(b.deadline || 'z');
+      default:
+        return 0;
+    }
   }
 
   function renderTable() {
@@ -608,6 +629,16 @@
 
     tbody.innerHTML = html;
     renderPagination(totalFiltered, totalPages);
+    updateSortIndicators();
+  }
+
+  function updateSortIndicators() {
+    document.querySelectorAll('.topic-table thead th[data-sort]').forEach(function (th) {
+      var col = th.dataset.sort;
+      th.classList.toggle('sort-active', col === sortColumn);
+      th.classList.toggle('sort-asc', col === sortColumn && sortDirection === 'asc');
+      th.classList.toggle('sort-desc', col === sortColumn && sortDirection === 'desc');
+    });
   }
 
   /* ── Pagination ── */
@@ -771,6 +802,20 @@
       if (!btn || btn.disabled) return;
       var page = parseInt(btn.dataset.page, 10);
       if (page && page >= 1) goToPage(page);
+    });
+
+    document.querySelector('.topic-table thead').addEventListener('click', function (e) {
+      var th = e.target.closest('th[data-sort]');
+      if (!th) return;
+      var col = th.dataset.sort;
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = col === 'deadline' ? 'asc' : 'asc';
+      }
+      currentPage = 1;
+      renderTable();
     });
 
     document.getElementById('topic-tbody').addEventListener('click', function (e) {
