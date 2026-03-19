@@ -174,8 +174,27 @@
   }
 
   /* ── Smart search ── */
+  function looksLikeId(q) {
+    return /[A-Z0-9]{2,}-/.test(q.toUpperCase()) || /\d{4}-\d{2}/.test(q);
+  }
+
+  function exactSubstringSearch(query) {
+    var q = query.toLowerCase();
+    return allCalls.filter(function (c) {
+      return (c.topicId && c.topicId.toLowerCase().indexOf(q) !== -1) ||
+             (c.callIdentifier && c.callIdentifier.toLowerCase().indexOf(q) !== -1) ||
+             (c.title && c.title.toLowerCase().indexOf(q) !== -1) ||
+             (c.programme && c.programme.toLowerCase().indexOf(q) !== -1) ||
+             (c.keywords && c.keywords.toLowerCase().indexOf(q) !== -1);
+    });
+  }
+
   function smartSearch(query) {
     if (!query.trim()) return null;
+
+    var exact = exactSubstringSearch(query);
+    if (exact.length > 0 || looksLikeId(query)) return exact;
+
     if (!fuseIndex) return null;
     var terms = expandQuery(query);
     var resultMap = new Map();
