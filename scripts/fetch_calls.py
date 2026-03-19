@@ -8,7 +8,7 @@ Usage:
 """
 
 import urllib.request, urllib.parse, json, uuid, math, time, re, sys, os
-from datetime import datetime
+import datetime
 from collections import Counter
 from pathlib import Path
 
@@ -122,7 +122,7 @@ def normalize_date(d):
         return d
     for fmt in ["%d %B %Y", "%d %b %Y", "%B %d, %Y"]:
         try:
-            return datetime.strptime(d.strip(), fmt).strftime("%Y-%m-%d")
+            return datetime.datetime.strptime(d.strip(), fmt).strftime("%Y-%m-%d")
         except ValueError:
             pass
     return d
@@ -221,6 +221,14 @@ def main():
             "keywords": ", ".join(kw[:10]) if kw else "",
             "portalUrl": f"https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/topic-details/{identifier.lower()}",
         })
+
+    today_str = datetime.date.today().isoformat()
+    before = len(calls)
+    calls = [c for c in calls if not (
+        c["callStatus"] == "open" and c.get("deadline") and c["deadline"] < today_str
+    )]
+    if before != len(calls):
+        print(f"\nRemoved {before - len(calls)} calls marked 'open' with past deadlines")
 
     calls.sort(key=lambda c: c.get("deadline") or "9999-99-99")
 

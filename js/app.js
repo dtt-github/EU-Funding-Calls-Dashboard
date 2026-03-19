@@ -201,6 +201,12 @@
     try { localSel = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
     selectedIds = new Set(localSel);
 
+    var todayStr = new Date().toISOString().slice(0, 10);
+    allCalls = allCalls.filter(function (c) {
+      if (c.callStatus === 'open' && c.deadline && c.deadline < todayStr) return false;
+      return true;
+    });
+
     enrichCalls(allCalls);
 
     var openCount = allCalls.filter(function (c) { return c.callStatus === 'open'; }).length;
