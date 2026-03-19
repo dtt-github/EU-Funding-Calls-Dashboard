@@ -97,7 +97,24 @@
   let selectedIds = new Set();
   let sharedIds = new Set();
   let activeProgrammeTab = 'all';
-  let activeFilters = { programme: new Set(), status: new Set(), type: new Set(), stage: new Set() };
+  let activeFilters = { cluster: new Set() };
+
+  var CLUSTER_LABELS = {
+    'CL1':   'Health',
+    'CL2':   'Culture, Creativity & Society',
+    'CL3':   'Civil Security',
+    'CL4':   'Digital, Industry & Space',
+    'CL5':   'Climate, Energy & Mobility',
+    'CL6':   'Food, Bioeconomy & Environment',
+    'MISS':  'Missions',
+    'JU':    'Joint Undertakings',
+    'INFRA': 'Research Infrastructures',
+    'WIDERA':'Widening & ERA',
+    'MSCA':  'Marie Skłodowska-Curie',
+    'EIC':   'European Innovation Council',
+    'EIE':   'European Innovation Ecosystems',
+    '':      'Other Programmes'
+  };
   let searchQuery = '';
   let currentPage = 1;
   let sortColumn = 'deadline';
@@ -598,22 +615,18 @@
 
   /* ── Filters ── */
   function buildFilters() {
-    var progs = [];
-    var progCounts = {};
-    allCalls.forEach(function (c) { progCounts[c.programme] = (progCounts[c.programme] || 0) + 1; });
-    progs = Object.keys(progCounts).sort(function (a, b) { return progCounts[b] - progCounts[a]; });
+    var clusterCounts = {};
+    allCalls.forEach(function (c) {
+      var cl = c.cluster || '';
+      clusterCounts[cl] = (clusterCounts[cl] || 0) + 1;
+    });
 
-    var types = Array.from(new Set(allCalls.map(function (c) { return c.actionType; }).filter(Boolean))).sort();
-    var statuses = ['open', 'forthcoming'];
-    var stages = Array.from(new Set(allCalls.map(function (c) { return stageLabel(c.stage); })));
+    var order = ['CL1','CL2','CL3','CL4','CL5','CL6','MISS','JU','INFRA','WIDERA','MSCA','EIC','EIE',''];
+    var clusters = order.filter(function (k) { return clusterCounts[k]; });
 
-    renderPills('filter-programme', progs.slice(0, 10), function (p) {
-      var short = PROG_SHORT[p] || p;
-      return short + ' (' + progCounts[p] + ')';
-    }, 'programme');
-    renderPills('filter-status', statuses, function (s) { return s.charAt(0).toUpperCase() + s.slice(1); }, 'status');
-    renderPills('filter-type', types.slice(0, 10), function (t) { return t; }, 'type');
-    renderPills('filter-stage', stages, function (s) { return s; }, 'stage');
+    renderPills('filter-cluster', clusters, function (cl) {
+      return (CLUSTER_LABELS[cl] || cl) + ' (' + clusterCounts[cl] + ')';
+    }, 'cluster');
   }
 
   function renderPills(containerId, items, labelFn, filterKey) {
@@ -659,17 +672,8 @@
     if (activeProgrammeTab !== 'all') {
       filtered = filtered.filter(function (c) { return c.programme === activeProgrammeTab; });
     }
-    if (activeFilters.programme.size) {
-      filtered = filtered.filter(function (c) { return activeFilters.programme.has(c.programme); });
-    }
-    if (activeFilters.status.size) {
-      filtered = filtered.filter(function (c) { return activeFilters.status.has(c.callStatus); });
-    }
-    if (activeFilters.type.size) {
-      filtered = filtered.filter(function (c) { return activeFilters.type.has(c.actionType); });
-    }
-    if (activeFilters.stage.size) {
-      filtered = filtered.filter(function (c) { return activeFilters.stage.has(stageLabel(c.stage)); });
+    if (activeFilters.cluster.size) {
+      filtered = filtered.filter(function (c) { return activeFilters.cluster.has(c.cluster || ''); });
     }
 
     var dir = sortDirection === 'asc' ? 1 : -1;
