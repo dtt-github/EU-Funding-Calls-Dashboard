@@ -258,20 +258,20 @@
     Auth._showToast = showToast;
 
     Auth._onAuthChange = async function (user) {
-      var local = [];
-      try { local = JSON.parse(localStorage.getItem('selectedCalls') || '[]'); } catch (e) {}
-
       if (user) {
+        var userKey = 'selectedCalls_' + user.id;
+        var cached = [];
+        try { cached = JSON.parse(localStorage.getItem(userKey) || '[]'); } catch (e) {}
         var remote = await Auth.loadSelections(user.id);
-        var merged = new Set(local.concat(remote));
+        var merged = new Set(cached.concat(remote));
         selectedIds = merged;
         saveSelections();
-        var localOnly = local.filter(function (id) { return !new Set(remote).has(id); });
-        localOnly.forEach(function (id) { Auth.saveSelection(id); });
+        var remoteSet = new Set(remote);
+        cached.filter(function (id) { return !remoteSet.has(id); })
+          .forEach(function (id) { Auth.saveSelection(id); });
         updateSelectionSubtitle(true);
       } else {
         selectedIds = new Set();
-        localStorage.removeItem('selectedCalls');
         updateSelectionSubtitle(false);
       }
       renderSelectedCalls();
@@ -740,7 +740,9 @@
   }
 
   function saveSelections() {
-    localStorage.setItem('selectedCalls', JSON.stringify(Array.from(selectedIds)));
+    var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
+    var key = user ? 'selectedCalls_' + user.id : 'selectedCalls';
+    localStorage.setItem(key, JSON.stringify(Array.from(selectedIds)));
   }
 
   function exportSelections() {
