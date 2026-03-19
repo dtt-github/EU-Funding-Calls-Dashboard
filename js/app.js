@@ -31,9 +31,9 @@
 
   /* ── Synonym Expansion Dictionary ── */
   const SYNONYMS = {
-    'construction':     ['steel', 'cement', 'concrete', 'civil engineering', 'structural', 'built environment', 'renovation', 'demolition'],
-    'building':         ['construction', 'renovation', 'built environment', 'structural'],
-    'infrastructure':   ['transport', 'urban', 'road', 'bridge', 'network'],
+    'construction':     ['building', 'buildings', 'renovation', 'built environment', 'civil engineering', 'structural', 'cement', 'concrete', 'demolition', 'infrastructure', 'modular', 'offsite', 'housing', 'neighbourhood', 'NEB'],
+    'building':         ['construction', 'buildings', 'renovation', 'built environment', 'structural', 'housing', 'energy efficiency'],
+    'infrastructure':   ['transport', 'urban', 'road', 'bridge', 'network', 'construction'],
     'ai':               ['artificial intelligence', 'machine learning', 'robot', 'automation', 'intelligent', 'GenAI', 'deep learning'],
     'artificial intelligence': ['ai', 'machine learning', 'robot', 'deep learning', 'neural network'],
     'machine learning': ['ai', 'artificial intelligence', 'neural', 'deep learning'],
@@ -178,38 +178,71 @@
     return /[A-Z0-9]{2,}-/.test(q.toUpperCase()) || /\d{4}-\d{2}/.test(q);
   }
 
+  function substringMatch(text, q) {
+    return text && text.toLowerCase().indexOf(q) !== -1;
+  }
+
   function exactSubstringSearch(query) {
     var q = query.toLowerCase();
     return allCalls.filter(function (c) {
-      return (c.topicId && c.topicId.toLowerCase().indexOf(q) !== -1) ||
-             (c.callIdentifier && c.callIdentifier.toLowerCase().indexOf(q) !== -1) ||
-             (c.title && c.title.toLowerCase().indexOf(q) !== -1) ||
-             (c.programme && c.programme.toLowerCase().indexOf(q) !== -1) ||
-             (c.keywords && c.keywords.toLowerCase().indexOf(q) !== -1);
+      return substringMatch(c.topicId, q) ||
+             substringMatch(c.callIdentifier, q) ||
+             substringMatch(c.title, q) ||
+             substringMatch(c.programme, q) ||
+             substringMatch(c.keywords, q);
     });
   }
 
   function smartSearch(query) {
     if (!query.trim()) return null;
 
-    var exact = exactSubstringSearch(query);
-    if (exact.length > 0 || looksLikeId(query)) return exact;
+    var q = query.toLowerCase().trim();
 
-    if (!fuseIndex) return null;
-    var terms = expandQuery(query);
-    var resultMap = new Map();
-    terms.forEach(function (term) {
-      var hits = fuseIndex.search(term);
-      hits.forEach(function (h) {
-        var existing = resultMap.get(h.item.topicId);
-        if (!existing || h.score < existing.score) {
-          resultMap.set(h.item.topicId, h);
-        }
+    var exactSet = new Set();
+    var exactResults = exactSubstringSearch(q);
+    exactResults.forEach(function (c) { exactSet.add(c.topicId); });
+
+    if (looksLikeId(q)) return exactResults;
+
+    var synonymResults = [];
+    var synonymSet = new Set();
+    var syns = SYNONYMS[q];
+    if (syns) {
+      syns.forEach(function (syn) {
+        var synLower = syn.toLowerCase();
+        allCalls.forEach(function (c) {
+          if (exactSet.has(c.topicId) || synonymSet.has(c.topicId)) return;
+          if (substringMatch(c.title, synLower) ||
+              substringMatch(c.keywords, synLower) ||
+              substringMatch(c.cluster, synLower)) {
+            synonymResults.push(c);
+            synonymSet.add(c.topicId);
+          }
+        });
       });
-    });
-    return Array.from(resultMap.values())
-      .sort(function (a, b) { return a.score - b.score; })
-      .map(function (r) { return r.item; });
+    }
+
+    var fuzzyResults = [];
+    if (fuseIndex) {
+      var terms = expandQuery(q);
+      var resultMap = new Map();
+      terms.forEach(function (term) {
+        var hits = fuseIndex.search(term);
+        hits.forEach(function (h) {
+          if (exactSet.has(h.item.topicId) || synonymSet.has(h.item.topicId)) return;
+          var existing = resultMap.get(h.item.topicId);
+          if (!existing || h.score < existing.score) {
+            resultMap.set(h.item.topicId, h);
+          }
+        });
+      });
+      fuzzyResults = Array.from(resultMap.values())
+        .sort(function (a, b) { return a.score - b.score; })
+        .map(function (r) { return r.item; });
+    }
+
+    var combined = exactResults.concat(synonymResults, fuzzyResults);
+    return combined.length > 0 ? combined : null;
   }
 
   async function init() {
