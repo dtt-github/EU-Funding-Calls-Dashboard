@@ -275,8 +275,14 @@
             renderTable();
           }
           var remoteSet = new Set(remote);
-          cached.filter(function (id) { return !remoteSet.has(id); })
-            .forEach(function (id) { Auth.saveSelection(id); });
+          var localOnly = cached.filter(function (id) { return !remoteSet.has(id); });
+          if (localOnly.length > 0) {
+            Promise.all(localOnly.map(function (id) { return Auth.saveSelection(id); }))
+              .then(function (results) {
+                var failed = results.filter(function (ok) { return !ok; }).length;
+                if (failed > 0) showToast(failed + ' selection(s) failed to sync to server');
+              });
+          }
         });
       } else {
         selectedIds = new Set();
@@ -300,6 +306,9 @@
         sharedIds = new Set(ids);
         renderSelectedCalls();
         renderTable();
+        if (ids.length === 0) {
+          showToast('This user has no selections yet, or they haven\'t synced to the server');
+        }
       });
     }
   }
@@ -737,10 +746,18 @@
     var user = (typeof Auth !== 'undefined') ? Auth.getUser() : null;
     if (selectedIds.has(topicId)) {
       selectedIds.delete(topicId);
-      if (user) Auth.removeSelection(topicId);
+      if (user) {
+        Auth.removeSelection(topicId).then(function (ok) {
+          if (!ok) showToast('Failed to sync removal to server');
+        });
+      }
     } else {
       selectedIds.add(topicId);
-      if (user) Auth.saveSelection(topicId);
+      if (user) {
+        Auth.saveSelection(topicId).then(function (ok) {
+          if (!ok) showToast('Failed to save selection to server');
+        });
+      }
     }
     saveSelections();
     renderSelectedCalls();
