@@ -538,17 +538,15 @@
       filtered = filtered.filter(function (c) { return activeFilters.stage.has(stageLabel(c.stage)); });
     }
 
-    if (!isSearching) {
-      var dir = sortDirection === 'asc' ? 1 : -1;
-      filtered.sort(function (a, b) {
-        var selA = selectedIds.has(a.topicId) ? 0 : (sharedIds.has(a.topicId) ? 1 : 2);
-        var selB = selectedIds.has(b.topicId) ? 0 : (sharedIds.has(b.topicId) ? 1 : 2);
-        if (selA !== selB) return selA - selB;
-        var cmp = compareByColumn(a, b, sortColumn);
-        if (cmp !== 0) return cmp * dir;
-        return a.topicId.localeCompare(b.topicId);
-      });
-    }
+    var dir = sortDirection === 'asc' ? 1 : -1;
+    filtered.sort(function (a, b) {
+      var selA = selectedIds.has(a.topicId) ? 0 : (sharedIds.has(a.topicId) ? 1 : 2);
+      var selB = selectedIds.has(b.topicId) ? 0 : (sharedIds.has(b.topicId) ? 1 : 2);
+      if (selA !== selB) return selA - selB;
+      var cmp = compareByColumn(a, b, sortColumn);
+      if (cmp !== 0) return cmp * dir;
+      return a.topicId.localeCompare(b.topicId);
+    });
 
     return filtered;
   }
