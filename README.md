@@ -1,41 +1,56 @@
 # EU Funding Calls Dashboard
 
-A fast, intelligent, static dashboard for all open and forthcoming EU Funding & Tenders calls — covering **939 topics** across **29 EU programmes** including Horizon Europe, Digital Europe, EDF, Erasmus+, Creative Europe, and more.
+A fast, intelligent, static dashboard for all open and forthcoming EU Funding & Tenders calls — covering **880+ topics** across **29 EU programmes** including Horizon Europe, Digital Europe, EDF, Erasmus+, Creative Europe, and more.
 
 **[Live Demo →](https://dtt-github.github.io/EU-Funding-Calls-Dashboard/)**
 
 ## Features
 
 ### Intelligent Search
+
+- **Relevance-scored results** — queries with industry synonyms rank results by how many related terms each call matches; a call about "construction + renovation + buildings" ranks above "capacity building"
 - **Fuzzy matching** via [Fuse.js](https://www.fusejs.io/) — handles typos and partial words
-- **Synonym expansion** — search "construction" and find calls about manufacturing, materials, infrastructure, etc.
-- **Keyword enrichment** — each call is tagged with industry-relevant terms for better discoverability
-- Results ranked by relevance when searching
+- **Synonym expansion** — search "construction" and find calls about housing, renovation, cement, built environment, infrastructure, and more
+- **Exact ID matching** — queries that look like topic IDs (e.g. `CL5-2026-09`) use precise substring matching
+- Results flow through three tiers: exact match → synonym/industry match → fuzzy match
 
 ### Filtering & Navigation
+
 - **Programme tabs** — quick switch between Horizon Europe, Digital Europe, EDF, Erasmus+ and more
 - **Filter pills** — filter by Programme, Status (Open / Forthcoming), Action Type, and Stage
+- **Sortable columns** — click any table header to sort ascending/descending
 - **Pagination** — 25 calls per page with full page navigation
-- Filters, search, and tabs all work together and reset pagination automatically
+- Filters, search, sorting, and tabs all work together and reset pagination automatically
 
-### Call Selection & Sharing
+### User Accounts & Call Selection
+
 - **Click the ★ star** on any call to mark it as a target
-- Selected calls appear in a prominent "My Target Calls" section at the top
-- **Sign in** with email + password (Supabase) to save selections to your account
-- **Share your selections** — click the Share button to copy a link; recipients see your picks highlighted in blue
-- Multiple users can maintain independent selections on the same dashboard
-- **Export IDs** button copies selected topic IDs as JSON to clipboard
+- Selected calls appear in a personalised **"[Your Name]'s Target Calls"** section at the top
+- **Sign in** with email + password (Supabase) to persist selections to your account
+- **Sign up** with your full name — displayed throughout the UI
+- **Profile settings** — update your display name or change your password at any time
 - Falls back to browser `localStorage` when not signed in
 
+### Sharing
+
+- **Share button** — copies a link that shows your selections to anyone
+- Recipients see your picks highlighted in blue with a **"Viewing selections shared by [Name]"** banner
+- Shared links include the sharer's name for clear attribution
+- Multiple users maintain independent selections on the same dashboard
+
 ### Data & Visualization
-- **939 calls** fetched live from the [EU SEDIA API](https://api.tech.ec.europa.eu/search-api/prod/rest/search)
-- **536 open** + **403 forthcoming** calls (as of data fetch date)
+
+- **880+ calls** fetched from the [EU SEDIA API](https://api.tech.ec.europa.eu/search-api/prod/rest/search)
+- Stale calls (marked "open" but with past deadlines) are automatically filtered out
 - Doughnut charts: by Programme, by Status, by Action Type
 - Live countdown to the next submission deadline
 - Direct links to the EU Funding & Tenders Portal for every topic
+- **Export** button copies selected topic IDs as JSON to clipboard
 
 ### Design
+
 - Light/dark theme following system preference, with manual toggle
+- Professional SVG icons on all action buttons
 - Fully responsive — works on desktop, tablet, and mobile
 - Zero build step — pure HTML, CSS, and vanilla JS
 - Loads fast on GitHub Pages (gzipped JSON ~100 KB)
@@ -57,20 +72,34 @@ The dashboard uses [Supabase](https://supabase.com/) for email + password authen
 
 1. Create a Supabase project at [supabase.com](https://supabase.com/)
 2. Run `scripts/supabase-setup.sql` in the Supabase SQL Editor to create the `selections` table and RLS policies
-3. Copy your **Project URL** and **anon public key** from Settings → API
-4. Paste them into `js/config.js`
-5. Commit and push — authentication is now live
+3. Grant table permissions (required when creating tables via SQL):
+   ```sql
+   GRANT SELECT ON public.selections TO anon, authenticated;
+   GRANT INSERT, DELETE ON public.selections TO authenticated;
+   ```
+4. Copy your **Project URL** and **anon public key** from Settings → API
+5. Paste them into `js/config.js`
+6. In Supabase **Authentication → URL Configuration**, set:
+   - **Site URL** → your GitHub Pages URL (e.g. `https://yourname.github.io/EU-Funding-Calls-Dashboard/`)
+   - **Redirect URLs** → same URL
+7. Commit and push — authentication is now live
 
 ### Sharing Selections
 
-1. Sign in → select calls with ★ star → click **Share**
-2. A link like `https://...?shared=USER_ID` is copied to your clipboard
+1. Sign in → select calls with ★ → click **Share**
+2. A link is copied containing your user ID and display name
 3. Anyone opening the link sees your selections highlighted in blue (read-only)
-4. They can sign in themselves to make their own selections alongside yours
+4. They can sign in themselves to make their own independent selections
+
+### Profile Management
+
+Click **Profile** in the top bar to:
+- Update your full name (displayed in the "Target Calls" heading and shared links)
+- Change your password
 
 ### Anonymous Fallback
 
-Without signing in, selections are saved in browser `localStorage` and work the same as before.
+Without signing in, selections are saved in browser `localStorage` and work normally. On next sign-in, local selections are synced to your Supabase account.
 
 ## Deploying to GitHub Pages
 
@@ -97,6 +126,7 @@ This queries the official EU Search API at `api.tech.ec.europa.eu` with:
 - **API Key**: `SEDIA`
 - **Filter**: grants (type 1, 2, 8), open + forthcoming (status 31094501, 31094502)
 - **Pagination**: 100 results per page across all pages
+- **Post-processing**: filters out calls marked "open" with past deadlines
 
 ## Project Structure
 
@@ -104,16 +134,18 @@ This queries the official EU Search API at `api.tech.ec.europa.eu` with:
 ├── index.html                  Single-page dashboard
 ├── css/styles.css              All styles (dark/light themes, responsive)
 ├── js/
-│   ├── app.js                  Search, filters, pagination, selection, charts
-│   ├── auth.js                 Supabase auth + selection CRUD
+│   ├── app.js                  Search, filters, pagination, selection, sorting, charts
+│   ├── auth.js                 Supabase auth, profile, selection CRUD
 │   └── config.js               Supabase project URL + anon key
 ├── data/
-│   └── calls.json              All 939 call entries (minified)
+│   └── calls.json              All call entries (minified)
 ├── scripts/
 │   ├── fetch_calls.py          Script to refresh call data from SEDIA API
-│   └── supabase-setup.sql      SQL to create selections table + RLS
+│   └── supabase-setup.sql      SQL to create selections table + RLS policies
 ├── .github/workflows/
 │   └── update-calls.yml        Weekly auto-refresh via GitHub Actions
+├── CONTRIBUTING.md             Contributor guidelines
+├── LICENSE                     MIT License
 └── README.md
 ```
 
@@ -147,10 +179,14 @@ Each call in `calls.json` has:
 - **GitHub Actions** — automated weekly data refresh
 - **[EU SEDIA API](https://api.tech.ec.europa.eu/)** — data source
 
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
+
 ## Data Source
 
 All call data sourced from the [EU Funding & Tenders Portal](https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/calls-for-proposals) via the SEDIA Search API. This is official European Commission data.
 
 ## License
 
-MIT
+[MIT](LICENSE)
