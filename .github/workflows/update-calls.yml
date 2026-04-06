@@ -16,6 +16,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v6
         with:
@@ -35,7 +36,18 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
           git add data/calls.json
           git commit -m "Auto-update call data from EU SEDIA API"
-          git pull --rebase origin main
-          git push origin main
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin main; then
+              echo "Push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}/5); remote may have moved — retrying…"
+            sleep $((attempt * 10))
+          done
+          echo "Push failed after 5 attempts"
+          exit 1
