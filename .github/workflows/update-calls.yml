@@ -21,9 +21,15 @@ jobs:
       - name: Fetch latest calls from EU SEDIA API
         run: python3 scripts/fetch_calls.py
 
+      # Note: bash runs with `set -e`. `git diff --quiet` exits 1 when the file
+      # *differs* — so we must use `if`, not `&&`, or the job fails when there
+      # are changes to commit.
       - name: Commit and push if data changed
         run: |
-          git diff --quiet data/calls.json && echo "No changes" && exit 0
+          if git diff --quiet data/calls.json; then
+            echo "No changes to data/calls.json"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/calls.json
