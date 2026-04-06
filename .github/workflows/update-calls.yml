@@ -1,9 +1,20 @@
+# Refreshes data/calls.json from the EU SEDIA API and opens a PR into main.
+#
+# Required repo settings (often why this fails with no PR):
+#   Settings → Actions → General → Workflow permissions:
+#     - "Read and write permissions"
+#     - Enable "Allow GitHub Actions to create and approve pull requests"
+#
+# If pushes/PRs still fail (e.g. strict org policy), add a repository secret
+# DATA_UPDATE_TOKEN: fine-grained PAT with Contents + Pull requests (write)
+# on this repo only. The workflow uses it in place of GITHUB_TOKEN when set.
+
 name: Update EU Funding Calls
 
 on:
   schedule:
     - cron: '0 6 * * 1'   # Every Monday at 06:00 UTC
-  workflow_dispatch:        # Manual trigger from Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,7 +28,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.DATA_UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Sync local main with origin
         run: |
@@ -31,28 +42,27 @@ jobs:
       - name: Fetch latest calls from EU SEDIA API
         run: python3 scripts/fetch_calls.py
 
-      # Open a PR instead of pushing to main — branch protection that requires
-      # pull requests blocks direct pushes from GITHUB_TOKEN (often reported
-      # as "fetch first" / non-fast-forward).
-      # Note: bash uses `set -e`; `git diff --quiet` exits 1 when the file
-      # differs, so use `if`, not `&&`.
-      - name: Open pull request if data changed
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.DATA_UPDATE_TOKEN || secrets.GITHUB_TOKEN }}
+          add-paths: data/calls.json
+          commit-message: Auto-update call data from EU SEDIA API
+          branch: auto/update-calls-data
+          base: main
+          title: Auto-update call data from EU SEDIA API
+          body: |
+            This PR updates `data/calls.json` from the EU SEDIA API (scheduled or manual workflow).
+
+            **Merge** to publish the new dataset on GitHub Pages.
+
+            If this workflow keeps failing with no PR, check **Settings → Actions → General**:
+            workflow permissions must be **Read and write**, and **Allow GitHub Actions to create and approve pull requests** must be enabled. As a fallback, add a `DATA_UPDATE_TOKEN` repository secret (see comments at the top of `update-calls.yml`).
+
+      - name: Log PR result
+        if: always()
         run: |
-          if git diff --quiet data/calls.json; then
-            echo "No changes to data/calls.json"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          BRANCH="auto/update-calls-${{ github.run_id }}"
-          git checkout -b "$BRANCH"
-          git add data/calls.json
-          git commit -m "Auto-update call data from EU SEDIA API"
-          git push -u origin "$BRANCH"
-          gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "Auto-update call data from EU SEDIA API" \
-            --body "Scheduled or manual workflow refreshed \`data/calls.json\` from the EU SEDIA API. Please review and merge to publish updated data on GitHub Pages."
+          echo "pull-request-operation=${{ steps.cpr.outputs.pull-request-operation }}"
+          echo "pull-request-url=${{ steps.cpr.outputs.pull-request-url }}"
+          echo "pull-request-number=${{ steps.cpr.outputs.pull-request-number }}"

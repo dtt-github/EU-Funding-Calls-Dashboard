@@ -112,9 +112,11 @@ Without signing in, selections are saved in browser `localStorage` and work norm
 
 ### Automatic (GitHub Actions)
 
-A workflow at `.github/workflows/update-calls.yml` runs **every Monday at 06:00 UTC** and fetches fresh data from the EU SEDIA API. If `data/calls.json` changed, it opens a **pull request** (branch `auto/update-calls-<run_id>`) instead of pushing directly to `main` — this works with **branch protection** that requires reviews. Merge the PR to update the site; GitHub Pages redeploys from `main` after merge.
+A workflow at `.github/workflows/update-calls.yml` runs **every Monday at 06:00 UTC** and fetches fresh data from the EU SEDIA API. If `data/calls.json` changed, it opens or updates a **pull request** on branch `auto/update-calls-data` (via [create-pull-request](https://github.com/peter-evans/create-pull-request)) — compatible with **branch protection** on `main`. Merge the PR to update the site; GitHub Pages redeploys from `main` after merge.
 
-You can also trigger it manually from the repo's **Actions** tab → "Update EU Funding Calls" → **Run workflow**.
+Trigger it manually from **Actions** → "Update EU Funding Calls" → **Run workflow**.
+
+**If the workflow fails or no PR appears:** open **Settings → Actions → General** and set **Workflow permissions** to **Read and write**, and turn on **Allow GitHub Actions to create and approve pull requests**. Repos created after Feb 2023 default to read-only tokens, which blocks PR creation. If your organisation forbids that, add a repository secret **`DATA_UPDATE_TOKEN`**: a fine-grained personal access token with **Contents** and **Pull requests** (write) on this repository only (see comments in `update-calls.yml`).
 
 ### Manual
 
