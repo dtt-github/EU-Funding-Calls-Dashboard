@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update:
@@ -18,6 +19,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sync local main with origin
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -25,10 +31,14 @@ jobs:
       - name: Fetch latest calls from EU SEDIA API
         run: python3 scripts/fetch_calls.py
 
-      # Note: bash runs with `set -e`. `git diff --quiet` exits 1 when the file
-      # *differs* — so we must use `if`, not `&&`, or the job fails when there
-      # are changes to commit.
-      - name: Commit and push if data changed
+      # Open a PR instead of pushing to main — branch protection that requires
+      # pull requests blocks direct pushes from GITHUB_TOKEN (often reported
+      # as "fetch first" / non-fast-forward).
+      # Note: bash uses `set -e`; `git diff --quiet` exits 1 when the file
+      # differs, so use `if`, not `&&`.
+      - name: Open pull request if data changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git diff --quiet data/calls.json; then
             echo "No changes to data/calls.json"
@@ -36,18 +46,13 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout main
+          BRANCH="auto/update-calls-${{ github.run_id }}"
+          git checkout -b "$BRANCH"
           git add data/calls.json
           git commit -m "Auto-update call data from EU SEDIA API"
-          for attempt in 1 2 3 4 5; do
-            git fetch origin main
-            git rebase origin/main
-            if git push origin main; then
-              echo "Push succeeded on attempt ${attempt}"
-              exit 0
-            fi
-            echo "Push rejected (attempt ${attempt}/5); remote may have moved — retrying…"
-            sleep $((attempt * 10))
-          done
-          echo "Push failed after 5 attempts"
-          exit 1
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Auto-update call data from EU SEDIA API" \
+            --body "Scheduled or manual workflow refreshed \`data/calls.json\` from the EU SEDIA API. Please review and merge to publish updated data on GitHub Pages."
