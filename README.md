@@ -112,7 +112,7 @@ Without signing in, selections are saved in browser `localStorage` and work norm
 
 ### Automatic (GitHub Actions)
 
-A workflow at `.github/workflows/update-calls.yml` runs **every Monday at 06:00 UTC** and fetches fresh data from the EU SEDIA API. If the data changed, it auto-commits and pushes — GitHub Pages redeploys automatically.
+A workflow at `.github/workflows/update-calls.yml` runs **every Monday at 06:00 UTC** and fetches fresh data from the EU SEDIA API. If `data/calls.json` changed, it opens a **pull request** (branch `auto/update-calls-<run_id>`) instead of pushing directly to `main` — this works with **branch protection** that requires reviews. Merge the PR to update the site; GitHub Pages redeploys from `main` after merge.
 
 You can also trigger it manually from the repo's **Actions** tab → "Update EU Funding Calls" → **Run workflow**.
 
